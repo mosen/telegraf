@@ -140,7 +140,6 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 ### Configuration:
 
 ```toml
-# Description
 #TCP
  #type = "TCP"
  #controller="192.168.0.9"
@@ -157,9 +156,10 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
  slaveId = 1
  timeout = 1
 
- [[inputs.modbus.Registers.InputRegisters.Tags]]
+  [[inputs.modbus.Registers.InputRegisters.Tags]]
    name = "Voltage"
-   order ="AB"	
+   order ="AB"
+   datatype = "FLOAT32"
    scale = "/10"
    address = [
     0      
@@ -167,7 +167,8 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
    name = "Current"
-   order ="CDAB"	
+   order ="CDAB"
+   datatype = "FLOAT32"
    scale = "/1000"
    address = [
     1,
@@ -176,7 +177,8 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Power"
-    order ="CDAB"	
+    order ="CDAB"
+    datatype = "FLOAT32"
     scale = "/10"
     address = [
      3,
@@ -185,7 +187,8 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Energy"
-    order ="CDAB"	
+    order = "CDAB"
+    datatype = "FLOAT32"	
     scale = "/1000"
     address = [
      5,
@@ -194,7 +197,8 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Frequency"
-    order ="AB"	
+    order = "AB"	    
+    datatype = "FLOAT32"
     scale = "/10"
     address = [
      7
@@ -202,7 +206,8 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "PowerFactor"
-    order ="AB"	
+    order = "AB"
+    datatype = "FLOAT32"
     scale = "/100"
     address = [
      8
