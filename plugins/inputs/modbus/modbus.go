@@ -116,11 +116,11 @@ const sampleConfig = `
  ## Analog Variables, Input Registers and Holding Registers
  ## name       - the variable name
  ## byte_order - the ordering of bytes
- ##  |---AB, ABCD   - Big Endian
- ##  |---BA, DCBA   - Little Endian
- ##  |---BADC       - Mid-Big Endian
- ##  |---CDAB       - Mid-Little Endian
- ## data_type  - UINT16, INT16, INT32, UINT32, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
+ ##  |---AB, ABCD, ABCDEFGH   - Big Endian
+ ##  |---BA, DCBA   	      - Little Endian
+ ##  |---BADC       		  - Mid-Big Endian
+ ##  |---CDAB       		  - Mid-Little Endian
+ ## data_type  - UINT16, INT16, INT32, UINT32, UINT64, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation), FLOAT64
  ## scale      - the final numeric variable representation
  ## address    - variable address
  
@@ -324,7 +324,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
 			switch item.ByteOrder {
-			case "AB", "BA", "ABCD", "CDAB", "BADC", "DCBA":
+			case "AB", "BA", "ABCD", "CDAB", "BADC", "DCBA", "ABCDEFGH":
 				break
 			default:
 				return fmt.Errorf("invalid byte order '%s' in '%s' - '%s'", item.ByteOrder, n, item.Name)
@@ -332,7 +332,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32":
+			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "FLOAT32-IEEE", "FLOAT32", "FLOAT64":
 				break
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
@@ -345,10 +345,10 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		// check address
-		if len(item.Address) == 0 || len(item.Address) > 2 {
+		if len(item.Address) == 0 || len(item.Address) > 4 {
 			return fmt.Errorf("invalid address '%v' length '%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
 		} else if n == cInputRegisters || n == cHoldingRegisters {
-			if (len(item.Address) == 1 && len(item.ByteOrder) != 2) || (len(item.Address) == 2 && len(item.ByteOrder) != 4) {
+			if (len(item.Address) == 1 && len(item.ByteOrder) != 2) || (len(item.Address) == 2 && len(item.ByteOrder) != 4) || (len(item.Address) == 4 && len(item.ByteOrder) != 8) {
 				return fmt.Errorf("invalid byte order '%s' and address '%v'  in '%s' - '%s'", item.ByteOrder, item.Address, n, item.Name)
 			}
 
@@ -463,6 +463,13 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 	case "INT32":
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		return format32(t.DataType, e32)
+	case "INT64":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		return format64(t.DataType, e64)
+	case "UINT64":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		f64 := format64(t.DataType, e64).(uint64)
+		return scaleUint64(t.Scale, f64)
 	case "FLOAT32-IEEE":
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		return format32(t.DataType, e32)
@@ -475,6 +482,9 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 			e32 := convertEndianness32(t.ByteOrder, bytes)
 			return scale32toFloat32(t.Scale, e32)
 		}
+	case "FLOAT64":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		return scale64toFloat64(t.Scale, e64)
 	default:
 		return 0
 	}
@@ -506,6 +516,15 @@ func convertEndianness32(o string, b []byte) uint32 {
 	}
 }
 
+func convertEndianness64(o string, b []byte) uint64 {
+	switch o {
+	case "ABCDEFGH":
+		return binary.BigEndian.Uint64(b)
+	default:
+		return 0
+	}
+}
+
 func format16(f string, r uint16) interface{} {
 	switch f {
 	case "UINT16":
@@ -530,12 +549,29 @@ func format32(f string, r uint32) interface{} {
 	}
 }
 
+func format64(f string, r uint64) interface{} {
+	switch f {
+	case "UINT64":
+		return r
+	case "INT64":
+		return int64(r)
+	case "FLOAT64":
+		return math.Float64frombits(r)
+	default:
+		return r
+	}
+}
+
 func scale16toFloat32(s float32, v uint16) float32 {
 	return float32(v) * s
 }
 
 func scale32toFloat32(s float32, v uint32) float32 {
 	return float32(v) * s
+}
+
+func scale64toFloat64(s float32, v uint64) float64 {
+	return float64(v) * float64(s)
 }
 
 func scaleInt16(s float32, v int16) int16 {
@@ -548,6 +584,10 @@ func scaleUint16(s float32, v uint16) uint16 {
 
 func scaleUint32(s float32, v uint32) uint32 {
 	return uint32(float64(v) * float64(s))
+}
+
+func scaleUint64(s float32, v uint64) uint64 {
+	return uint64(float64(v) * float64(s))
 }
 
 // Gather implements the telegraf plugin interface method for data accumulation
