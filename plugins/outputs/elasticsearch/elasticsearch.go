@@ -303,6 +303,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	res, err := bulkRequest.Do(ctx)
 
 	if err != nil {
+		log.Println(bulkRequest)
 		return fmt.Errorf("Error sending bulk request to Elasticsearch: %s", err)
 	}
 
